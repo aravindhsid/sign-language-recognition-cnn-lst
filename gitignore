@@ -1,0 +1,74 @@
+
+import tensorflow as tf
+from tensorflow.keras import layers, models
+
+
+def build_model(
+    num_classes,
+    frames=30,
+    height=64,
+    width=64,
+    channels=3
+):
+    inputs = layers.Input(
+        shape=(frames, height, width, channels)
+    )
+
+    # CNN feature extraction for every video frame
+    x = layers.TimeDistributed(
+        layers.Conv2D(
+            32, (3, 3),
+            activation="relu",
+            padding="same"
+        )
+    )(inputs)
+
+    x = layers.TimeDistributed(
+        layers.MaxPooling2D((2, 2))
+    )(x)
+
+    x = layers.TimeDistributed(
+        layers.Conv2D(
+            64, (3, 3),
+            activation="relu",
+            padding="same"
+        )
+    )(x)
+
+    x = layers.TimeDistributed(
+        layers.MaxPooling2D((2, 2))
+    )(x)
+
+    x = layers.TimeDistributed(
+        layers.Conv2D(
+            128, (3, 3),
+            activation="relu",
+            padding="same"
+        )
+    )(x)
+
+    x = layers.TimeDistributed(
+        layers.GlobalAveragePooling2D()
+    )(x)
+
+    # LSTM learns movement across frames
+    x = layers.LSTM(128, return_sequences=False)(x)
+
+    x = layers.Dropout(0.4)(x)
+
+    x = layers.Dense(64, activation="relu")(x)
+
+    outputs = layers.Dense(
+        num_classes,
+        activation="softmax"
+    )(x)
+
+    model = models.Model(inputs, outputs)
+
+    model.compile(
+        optimizer="adam",
+        loss="sparse_categorical_crossentropy",
+        metrics=["accuracy"]
+    )
+
+    return model
